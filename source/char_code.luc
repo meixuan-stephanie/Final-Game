@@ -1,0 +1,39 @@
+module char_code (
+    input char[8],
+    output segs [7]
+  ) {
+
+  always {
+    case(char){
+    0: segs = 7b0;
+    1: segs = 7b1110111; //A
+    2: segs = 7b1111111; //B
+    3: segs = 7b0111001; //C
+    4: segs = 7b0111111; //D
+    5: segs = 7b1111001; //E
+    6: segs = 7b1110001; //F
+    7: segs =7b1101101; //5,S
+    8: segs = 7b0110000; //I
+    9: segs = 7b0111000; //L
+    10: segs =7b0110111; //N
+    11: segs =7b1100111; //q
+    12: segs =7b1110011; //P
+    13: segs =7b0110001; //R
+    14: segs =7b1111000; //t
+    15: segs =7b0111110; //U
+      
+    16: segs =7b0111111; //0,O
+    17: segs =7b0110000; //1
+    18: segs =7b1011011; //2
+    19: segs =7b1001111; //3
+    20: segs =7b1100110; //4
+    21: segs =7b1101101; //5,S
+    22: segs =7b1111101; //6,G
+    23: segs =7b0000111; //7
+    24: segs =7b1111111; //8
+    25: segs =7b1101111; //9
+    default:
+      segs = 7b0;
+    }
+  }
+}

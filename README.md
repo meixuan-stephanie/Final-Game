@@ -48,8 +48,17 @@ There would be four cases for subtarctor only
 
 
 ### Boolean unit justification
+###### We have AND, NAND, OR, NOR, XOR, A six gates in total
 
 ### Multiplier unit justification
-
+There would be seven cases in total
+###### *postive multiplies postive no overflow*
+###### *postive multiplies postive  overflow*
+###### *negative multiplies negative no overflow*
+###### *negative multiplies negative overflow*
+###### *postive multiplies negative no overflow*
+###### *postive multiplies negtive overflow*
+###### *zero multiplies zero no overflow*
 
 ### Shifter unit justification
+###### basically shifer for this 16bit ALU would be able to shift at most 15bits.In specific, any value and sum of among 2^0, 2^1, 2^2,2^3.

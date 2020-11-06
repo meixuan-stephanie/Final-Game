@@ -1,5 +1,5 @@
 # 50.004-ALU-Check-off
-# This Readme File serves as justification for all possible test cases in each component of ALU
+# This Readme File serves as justification purpose for all possible test cases in each component of ALU
 ## It contains a folder only which has all of our work inside.
 ### Compare unit justification
 There would be nine test cases for the compare unit and three cases for each compare unit. 

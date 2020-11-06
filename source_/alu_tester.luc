@@ -1,0 +1,389 @@
+  
+module alu_tester (
+    input clk,  // clock
+    input rst, 
+    input start,  
+    output io_led [2][8],
+    output result[2],
+    output io_seg[4][8]    
+  ) {
+  alu alu;
+  fsm testAluFsm(.clk(clk), .rst(rst))={ADD1,ADD2, ADD3, ADD4, MUL1,MUL2,MUL3,MUL4, SUB1,SUB2,SUB3,SUB4, AND, OR, XOR , NAND, NOR,
+                                       A, SHL, SHR, SRA, CMPEQ1,CMPEQ2, CMPLT1,CMPLT2, CMPLE1,CMPLE2
+                                      ,CMPLE3,CMPLE4,FAIL,PASS}; 
+
+  always {
+    alu.alufn_signal=0;
+    alu.b=0;
+    alu.a=0;
+    io_led= 2x{{8h00}};
+    result=00;
+    io_seg={8h0,8h0,8h0,8h0};
+    case(start){
+    
+      b1:      
+         if(rst==b1){
+                testAluFsm.d=testAluFsm.ADD1;
+        }
+        case(testAluFsm.q){
+             
+          //pos+pos
+        //no overflowing
+        testAluFsm.ADD1 : 
+              alu.alufn_signal=b000000;
+              alu.a=16b001100;
+              alu.b=16b011000;
+              io_led[0]=8h01;
+               
+              if(alu.out==16b100100&&alu.z==0&&alu.v==0&&alu.n==0){
+                                      
+                  testAluFsm.d=testAluFsm.ADD2;      
+              }
+              else{
+
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+          //POS+POS
+          //OVERFLOW  
+        testAluFsm.ADD2 : 
+              alu.alufn_signal=b000000;
+              alu.a=16h7FFF;
+              alu.b=16h7FFF;
+              io_led[0]=8h02;
+              if(alu.out==16hFFFE&&alu.z==0&&alu.v==1&&alu.n==1){                  
+                testAluFsm.d=testAluFsm.ADD3;      
+              }
+              else{
+
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+          //pos+neg  
+        testAluFsm.ADD3 : 
+              alu.alufn_signal=b000000;
+              alu.a=16b011000;
+              alu.b=16hFFFF;
+              io_led[0]=8h03;
+              if(alu.out==16h0017&&alu.z==0&&alu.v==0&&alu.n==0){                               
+                testAluFsm.d=testAluFsm.ADD4;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+      //neg+neg  
+        testAluFsm.ADD4 : 
+              alu.alufn_signal=b0;
+              alu.a=16hFFFF;
+              alu.b=16hFFFF;
+              io_led[0]=8h04;
+              if(alu.out==16hFFFE&&alu.z==0&&alu.v==0&&alu.n==b1){       
+              testAluFsm.d=testAluFsm.SUB1;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+          //SUBTRACT:neg-neg,NEVER Overflow
+        testAluFsm.SUB1 : 
+              alu.alufn_signal=b1;
+              alu.a=16hFFFF;
+              alu.b=16hFFFF;
+              io_led[0]=8h05;
+              if(alu.out==16h0000&&alu.z==1&&alu.v==0&&alu.n==b0){       
+              testAluFsm.d=testAluFsm.SUB2;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+          //positive-positive NEVER Overflow
+         testAluFsm.SUB2 : 
+              alu.alufn_signal=b1;
+              alu.a=16h0001;
+              alu.b=16h0001;
+              io_led[0]=8h06;
+              if(alu.out==16h0000&&alu.z==1&&alu.v==0&&alu.n==b0){       
+              testAluFsm.d=testAluFsm.SUB3;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              } 
+            // negative-positive overflow  
+        testAluFsm.SUB3 : 
+              alu.alufn_signal=b1;
+              alu.a=16h8000;
+              alu.b=16h0001;
+              io_led[0]=8h07;
+              if(alu.out==16h7FFF&&alu.z==0&&alu.v==1&&alu.n==b0){       
+              testAluFsm.d=testAluFsm.SUB4;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }  
+             // negative-positive no overflow  
+         testAluFsm.SUB4 : 
+              alu.alufn_signal=b1;
+              alu.a=16hFFFF;
+              alu.b=16h0001;
+              io_led[0]=8h08;
+              if(alu.out==16hFFFE&&alu.z==0&&alu.v==0&&alu.n==b1){       
+              testAluFsm.d=testAluFsm.MUL1;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+        //multiplier:Positive*Positive no overflow
+         testAluFsm.MUL1 : 
+              alu.alufn_signal=b10;
+              alu.a=16h1234;
+              alu.b=16h0003;
+              io_led[0]=8h09;
+              if(alu.out==16h369C&&alu.z==0&&alu.v==0&&alu.n==b0){       
+              testAluFsm.d=testAluFsm.MUL2;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }   
+          //positive*positive overflow  
+        testAluFsm.MUL2 : 
+              alu.alufn_signal=b10;
+              alu.a=16h1234;
+              alu.b=16h4321;
+              io_led[0]=8h0A;
+              if(alu.out==16hF4B4&&alu.z==0&&alu.v==1&&alu.n==b1){       
+              testAluFsm.d=testAluFsm.MUL3;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              } 
+          // negative*negative
+          testAluFsm.MUL3 : 
+              alu.alufn_signal=b10;
+              alu.a=16hFFF0;
+              alu.b=16hF001;
+              io_led[0]=8h0B;
+              if(alu.out==16hFFF0&&alu.z==0&&alu.v==0&&alu.n==b1){       
+              testAluFsm.d=testAluFsm.MUL4;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              } 
+            // positive*negative no overflow
+            testAluFsm.MUL4 : 
+              alu.alufn_signal=b10;
+              alu.a=16h0002;
+              alu.b=16hFCCC;
+              io_led[0]=8h0C;
+              if(alu.out==16hF998&&alu.z==0&&alu.v==0&&alu.n==b1){       
+              testAluFsm.d=testAluFsm.AND;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+        //BOOLEAN:AND
+        testAluFsm.AND:
+              alu.alufn_signal=b011000;
+              alu.a=16b0000000000001100;
+              alu.b=16b0000000000001010;
+              io_led[0]=8h0D;
+              if(alu.out== 16b1000){              
+              testAluFsm.d=testAluFsm.OR;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+            
+            //BOOLEAN:OR
+        testAluFsm.OR:
+              alu.alufn_signal=b011110;
+              alu.a=16b1100;
+              alu.b=16b1010;
+              io_led[0]=8h0E; 
+              if(alu.out==16b1110){              
+              testAluFsm.d=testAluFsm.XOR;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }    
+            //BOOLEAN:XOR
+        testAluFsm.XOR:
+              alu.alufn_signal=b010110;
+              alu.a=16b0000000000001100;
+              alu.b=16b0000000000001010;
+              io_led[0]=8h0F;
+              if(alu.out== 16b0110){              
+              testAluFsm.d=testAluFsm.NOR;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+            //BOOLEAN:NAND
+        testAluFsm.NAND:
+              alu.alufn_signal=010111;
+              alu.a=16b0000000000000000;
+              alu.b=16b0000000000000000;
+              io_led[0]=8h10;
+              if(alu.out== 16b1111111111111111){              
+              testAluFsm.d=testAluFsm.NOR;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+            //BOOLEAN:NOR
+        testAluFsm.NOR:
+              alu.alufn_signal=010001;
+              alu.a=16b0000000000001100;
+              alu.b=16b0000000000001010;
+              io_led[0]=8h11;
+              if(alu.out== 16b1111111111110001){              
+              testAluFsm.d=testAluFsm.SHL;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+             //shifter:left
+         testAluFsm.SHL:
+              alu.alufn_signal=100000;
+              alu.a=16b1101111111100011;
+              alu.b=16b00101;
+              io_led[0]=8h12;
+              if(alu.out== 16b1111110001100000){              
+              testAluFsm.d=testAluFsm.SHR;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+            //shifter:right
+        testAluFsm.SHR:
+              alu.alufn_signal=100001;
+              alu.a=16b1101111111100011;
+              alu.b=16b00101;
+              io_led[0]=8h13;
+              if(alu.out== 16b0000011011111111){              
+              testAluFsm.d=testAluFsm.SRA;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }  
+           //shifter:right arith
+        testAluFsm.SRA:
+              alu.alufn_signal=100011;
+              alu.a=16b1101111111100011;
+              alu.b=16b00101;
+              io_led[0]=8h14;
+              if(alu.out== 16b1111111011111111){              
+              testAluFsm.d=testAluFsm.CMPEQ1;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+           //compare:equal
+        testAluFsm.CMPEQ1://check
+              alu.alufn_signal=110011;
+              alu.a=16hFFFF;
+              alu.b=16hFFFF;
+              io_led[0]=8h15;
+              if(alu.out[0]==1){              
+              testAluFsm.d=testAluFsm.CMPEQ2;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+          //compare:not equal
+        testAluFsm.CMPEQ2://check
+              alu.alufn_signal=110011;
+              alu.a=16hFFFF;
+              alu.b=16hFFF0;
+              io_led[0]=8h16;
+              if(alu.out[0]==0){              
+              testAluFsm.d=testAluFsm.CMPLT1;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+         //compare:less than-positive 
+        testAluFsm.CMPLT1:
+              alu.alufn_signal=110101;
+              alu.a=16hFFFF;
+              alu.b=16h0000;
+              io_led[0]=8h17;
+              if(alu.out[0]==0){              
+              testAluFsm.d=testAluFsm.CMPLT2;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+            //compare:less than-negative adder result 
+        testAluFsm.CMPLT2:
+              alu.alufn_signal=110101;
+              alu.a= 16h0000;
+              alu.b=16hFFFF;
+              io_led[0]=8h18;
+              if(alu.out[0]==0){              
+              testAluFsm.d=testAluFsm.PASS;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              } 
+            //compare:less than or eqaul -positive
+        testAluFsm.CMPLE1:
+              alu.alufn_signal=110111;
+              alu.a=16h0000;
+              alu.b=16h0000;              
+              io_led[0]=8h19;
+              if(alu.out[0]==1){              
+              testAluFsm.d=testAluFsm.CMPLE2;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              } 
+            //compare:less than or eqaul -positive test - negative adder result, less than:
+        testAluFsm.CMPLE2:
+              alu.alufn_signal=110111;
+              alu.a= 16b110;
+              alu.b=16b111;
+              io_led[0]=8h1A;
+              if(alu.out[0]==1){              
+              testAluFsm.d=testAluFsm.CMPLE3;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }
+            //compare:less than or eqaul-positive result: equals to:        
+        testAluFsm.CMPLE3:
+              alu.alufn_signal=110111;
+              alu.a= 16b110;
+              alu.b=16b110;
+              io_led[0]=8h1B;
+              if(alu.out[0]==1){              
+              testAluFsm.d=testAluFsm.CMPLE4;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              } 
+        testAluFsm.CMPLE4:
+              alu.alufn_signal=110111;
+              alu.a=16b111;
+              alu.b=16b110;
+              io_led[0]=8h1C;
+              if(alu.out[0]==0){              
+              testAluFsm.d=testAluFsm.PASS;      
+              }
+              else{
+                  testAluFsm.d=testAluFsm.FAIL;
+              }   
+        testAluFsm.FAIL:
+            io_led[0]=8hFF;
+              io_seg={8h6,8h1,8h8,8h9};  
+            
+        testAluFsm.PASS:
+            io_led=2x{{8hFF}};
+            io_seg={8hC,8h1,8h7,8hF7};              
+      } 
+
+        
+        
+        
+  
+        
+        
+                      
+    }
+  }

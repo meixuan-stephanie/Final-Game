@@ -12,18 +12,40 @@ false
 false
 ##
 **CMPLE**
-###### *value == value* false
-###### *smallValue >= bigValue* false
-###### *smallValue <= bigValue* true
+###### *value == value* 
+false
+###### *smallValue >= bigValue* 
+false
+###### *smallValue <= bigValue* 
+true
 ##
 **CMPLT**
-###### *value == value* false
-###### *smallValue > bigValue* false
-###### *smallValue < bigValue* true
+###### *value == value* 
+false
+###### *smallValue > bigValue* 
+false
+###### *smallValue < bigValue* 
+true
 
 ### Adder unit justification
+###### Overflow can never happen if two operands have differnt signs and it's only possible in operands with the same signs.
+There would be four cases for addiction only
+##
+###### *zero+zero no overflow* 
+###### *positive+positive no overflow* 
+###### *positive+positive overflow* 
+###### *positive+negative never overflow(same for negative+positive by swaping a,b position)* 
+
 
 ### Subtractor unit justification
+
+There would be four cases for subtarctor only
+##
+###### *zero-zero no overflow* 
+###### *positive-positive never overflow(same for negative-negative by swaping a,b position)* 
+###### *negative-positive overflow* 
+###### *negative-positive no overflow* 
+
 
 ### Boolean unit justification
 

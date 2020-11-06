@@ -28,7 +28,7 @@ module alu_tester (
         case(testAluFsm.q){
              
           //pos+pos
-        //no overflowing
+        //no overflow
         testAluFsm.ADD1 : 
               alu.alufn_signal=b000000;
               alu.a=16b001100;
@@ -57,7 +57,7 @@ module alu_tester (
 
                   testAluFsm.d=testAluFsm.FAIL;
               }
-          //pos+neg  
+          //pos+neg  Never overflow
         testAluFsm.ADD3 : 
               alu.alufn_signal=b000000;
               alu.a=16b011000;

@@ -1,0 +1,33 @@
+module adder (
+    input a[16],  
+    input b[16],
+    input alufn[6],
+    output z,
+    output v,
+    output n,
+    output out[16]
+  ) {
+  sig adder[16];
+  always {
+    out =16b0;
+    z=b0;
+    v=b0;
+    n=b0;
+    adder=16b0;
+    case(alufn[1:0]){
+      b00:
+      adder=a+b;
+      b01:
+      adder=a-b;
+      b10:
+      adder=a*b;
+
+      }
+    if(adder==16*b0){
+      z=1;
+      }
+     v = (a[15] & (b[15] ^ alufn[0]) & !adder[15]) | (!a[15] & !(b[15] ^ alufn[0]) & adder[15]); 
+    n=adder[15];
+    out=adder;
+    }
+}

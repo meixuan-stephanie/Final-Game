@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="final game" board="Alchitry Au" language="Lucid" version="3">
+  <files>
+    <src>shifter.luc</src>
+    <src>auto_game.luc</src>
+    <component>pipeline.luc</component>
+    <component>counter.luc</component>
+    <src top="true">au_top.luc</src>
+    <component>pn_gen.luc</component>
+    <src>alu.luc</src>
+    <src>boolean.luc</src>
+    <src>adder.luc</src>
+    <component>reset_conditioner.luc</component>
+    <component>edge_detector.luc</component>
+    <src>compare.luc</src>
+    <component>button_conditioner.luc</component>
+    <constraint>newconstrains.xdc</constraint>
+    <constraint>custom.acf</constraint>
+  </files>
+</project>

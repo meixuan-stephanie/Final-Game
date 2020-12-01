@@ -1,0 +1,27 @@
+module compare (  
+    input b[16],
+    input a[16],
+    input alufn[6],  
+    output out[16]
+  ) {
+   sig cmp;  // Signal for storing the least significant bit(LSB) of the output
+  always {
+  cmp=0;
+    out=16b0;
+    case(alufn[2:0]){
+      b011:
+        if(a==b){
+        cmp=1;}
+      b101:
+      if($signed(a)<$signed(b)){
+        cmp=1;}
+      b111:
+        if($signed(a)<=$signed(b)){
+        cmp=1;}
+      default:
+        cmp=1;
+      }
+    out[15:1]=15b0;
+    out[0]=cmp;
+  }
+}

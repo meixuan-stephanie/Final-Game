@@ -1,0 +1,528 @@
+module auto_game (
+
+    input clk,              // 100MHz clock
+    input rst,            // reset button (active low)
+    output io_led [3][8],   // LEDs on IO Shield
+    output seg [8],      // 7-segment LEDs on IO Shield
+    output sel [4],      // Digit select on IO Shield
+
+    input io_dip [3][8],     // DIP switches on IO Shield
+    output led_player_1[5],
+    output led_player_2[5],
+    input button_player_1[5],        //player 1 inputs
+    input button_player_2[5],
+    input switch
+    //CHANGE IO_DIP[2][7] TO SWITHCH input
+  ) {
+
+  alu alu;
+  const SLOWCLOCK_SIZE = 26; 
+  const TIMER_1=20;
+  const TIMER_2=20;
+  counter slowClock_game(#SIZE(SLOWCLOCK_SIZE), .clk(clk), .rst(rst)); 
+  edge_detector slowClockEdge_1(#RISE(1), #FALL(0), .clk(clk));
+  edge_detector slowClockEdge_2(#RISE(1), #FALL(0), .clk(clk));  
+  edge_detector buttondetector_1[5](#RISE(1), #FALL(0),.clk(clk)); //detect on rising edge only
+  button_conditioner buttoncond_1[5](.clk(clk));
+  
+    edge_detector buttondetector_2[5](#RISE(1), #FALL(0),.clk(clk)); //detect on rising edge only
+  button_conditioner buttoncond_2[5](.clk(clk));
+ 
+  pn_gen rng(.clk(clk), .rst(rst)); 
+   
+ multi_seven_seg disp(.clk(clk), .rst(rst));
+  
+  fsm state (.clk(clk), .rst(rst)) = {IDLE,START_GAME,ENTER_DIFFICULTY,GAME_STARTS,STATE1,STATE2,STATE3,STATE4,STATE5,GAME_END,PLAYER_1,PLAYER_2,DRAW,GAMEOVER}; 
+  dff inp_game_difficulty[2](.clk(clk), .rst(rst));  // to store value of difficulty
+  dff checker(.clk(clk), .rst(rst));
+  dff random[3](.clk(clk), .rst(rst));              //store the value of a random number
+  dff speed(.clk(clk), .rst(rst));                //controls speed of game
+  dff int[5](.clk(clk), .rst(rst));
+  dff score_1[8](.clk(clk), .rst(rst));              //stores score for 1
+  dff score_2[8](.clk(clk), .rst(rst));               //stores score for 2 
+    dff sub(.clk(clk), .rst(rst));                //checkes if difficulty 3 true
+  dff unit1[8](.clk(clk), .rst(rst));                //sotres unit place 1 value
+  dff unit2[8](.clk(clk), .rst(rst));                //sotres unit place 1 value  
+  always {
+    
+    slowClockEdge_1.in = slowClock_game.value[SLOWCLOCK_SIZE-1];  
+    slowClockEdge_2.in = slowClock_game.value[SLOWCLOCK_SIZE-2];      
+    buttoncond_1.in = button_player_1[4:0];//button checker
+    buttondetector_1.in = buttoncond_1.out;
+    
+    buttoncond_2.in = button_player_2[4:0];//button checker
+    buttondetector_2.in = buttoncond_2.out;
+    sel = ~disp.sel;
+    seg = disp.seg;      //initialising
+
+    disp.values = {8h0,8h0,8h0,8h0};
+         
+    rng.next=1;
+    rng.seed=1;
+ 
+    io_led = 3x{{8h00}};    // turn LEDs off
+    
+    led_player_1=00000;
+    led_player_2=00000;
+    
+    alu.a=16b0;
+    alu.b=16b0;
+    alu.alufn_signal=000000;
+    
+    case(io_dip[2][7]){         
+      b0://starting manual testing
+      if(switch==1|io_dip[2][5]==1){
+          state.d=state.IDLE;
+          }
+      case(state.q){
+            state.IDLE:
+                  disp.values = {8h0,8h1,8hB,8hC}; //show currect state IDLE          
+                  io_led[1][0]=1;
+                  if(io_dip[2][5]==0){
+                      state.d=state.START_GAME;
+                      }    
+                  
+            state.START_GAME:
+                  io_led[1][1:0]=checker.q;
+                  disp.values = {8h1,8h0,8hB,8hC};
+                  io_led[0][0]=1;
+                  led_player_1[0]=1;
+                  inp_game_difficulty.d=00;
+                  if (buttondetector_1.out[4]==1) {                  
+                      state.d = state.ENTER_DIFFICULTY;        
+                      }  
+          
+          
+            
+            
+            state.ENTER_DIFFICULTY:
+                  io_led[0][1]=1;
+                  disp.values = {8h0,8h1,8hD,c{6h0,inp_game_difficulty.q}};
+                  io_led[0][7:6]=inp_game_difficulty.q;
+                      if (buttondetector_1.out[0]){
+                          //fourth button pressed 
+                          inp_game_difficulty.d=01;
+                          }
+                      else if (buttondetector_1.out[1]){
+                          //third button pressed 
+                          inp_game_difficulty.d = b10;
+                          }
+                      else if (buttondetector_1.out[2]){
+                          //second button pressed 
+                          inp_game_difficulty.d = b11;
+                          }
+                      else if (buttondetector_1.out[3]){
+                          //first button pressed 
+                          inp_game_difficulty.d= b00;
+                          }                                         
+                      if(buttondetector_1.out[4]==1 & inp_game_difficulty.q!=00){
+                              state.d=state.GAME_STARTS;
+                          }
+                
+        
+            
+                    
+            state.GAME_STARTS:
+                checker.d=0;
+                disp.values = {8h5,8hE,8h10,8hE};
+                sub.d=0;
+                speed.d=slowClockEdge_1.out;
+                int.d=00000;
+                io_led[2][7]=1;
+                score_1.d=00000;
+                score_2.d=000000;
+                io_led[2][7:3]=score_1.q[4:0];
+                io_led[1][1:0]=inp_game_difficulty.q;
+
+                random.d=rng.num[2:0];            
+                if(buttondetector_1.out[4]==1){
+                    
+                    random.d=rng.num[2:0];
+                      case(random.q[2:0]){
+                          b000:state.d=state.STATE1;
+                          b001: state.d=state.STATE2;
+                          b010: state.d=state.STATE3;
+                          b011: state.d=state.STATE4;
+                          b100: state.d=state.STATE5;
+                          b110: state.d=state.STATE3;
+                          b111: state.d=state.STATE4;
+                          b101: state.d=state.STATE2;      
+                          default: state.d=state.STATE3;
+                           }                                                    
+                    }
+               
+
+                         
+            state.STATE1 : 
+                  unit1.d=score_1.q-(8hA*(score_1.q/8hA));
+                  unit2.d=score_2.q-(8hA*(score_2.q/8hA));
+                  
+                  disp.values = {score_1.q/10,unit1.q,score_2.q/10,unit2.q};
+                  io_led[0][0]=1;
+                  io_led[1][4:0]=int.q;
+                  io_led[2][2:0]=random.q;
+                  io_led[2][7:3]=score_1.q[4:0];
+                  led_player_1[0]=1;
+                  led_player_2[0]=1;
+                  case(inp_game_difficulty.q){
+                      b11:
+                          if(int.q>=TIMER_2){
+                              state.d = state.GAME_END;
+                              }
+                      default:
+                          if(int.q>=TIMER_1){
+                              state.d = state.GAME_END;
+                              } 
+                  }
+
+   
+                   case(inp_game_difficulty.q){
+                        b01:speed.d=slowClockEdge_1.out;
+                            sub.d=0;
+                        b10:speed.d=slowClockEdge_1.out;
+                            sub.d=1;
+                        b11:speed.d=slowClockEdge_2.out;
+                            sub.d=1;                          
+                        }
+            //score counting
+                   if( buttondetector_1.out[0]==1){//increase score of 1
+                        score_1.d=score_1.q+1;            
+                        }
+                   if( buttondetector_2.out[0]==1){//increase score of 2
+                        score_2.d=score_2.q+1;            
+                        } 
+            //score reduction                    
+                   if((buttondetector_1.out[1]==1|buttondetector_1.out[2]==1|buttondetector_1.out[3]==1|buttondetector_1.out[4]==1) & sub.q==1 & (score_1.q!=5b0)){
+                              score_1.d=score_1.q-1;
+                          }
+                  if((buttondetector_2.out[1]==1|buttondetector_2.out[2]==1|buttondetector_2.out[3]==1|buttondetector_2.out[4]==1) & sub.q==1&(score_2.q!=5b0)){
+                              score_2.d=score_2.q-1;
+                          }
+                    
+                                
+                   if (speed.q == b1){ //only trigger change when slowClockEdge gives a 1
+                      int.d=int.q+1;    
+                      random.d=rng.num[2:0];
+                      
+                      case(random.q[2:0]){
+                          b000:state.d=state.STATE1;
+                          b001: state.d=state.STATE2;
+                          b010: state.d=state.STATE3;
+                          b011: state.d=state.STATE4;
+                          b100: state.d=state.STATE5;
+                          b110: state.d=state.STATE3;
+                          b111: state.d=state.STATE4;
+                          b101: state.d=state.STATE5;      
+                          default: state.d=state.STATE5;
+                           }
+              
+
+                                                       
+                    }
+              
+            state.STATE2 : 
+                  unit1.d=score_1.q-(8hA*(score_1.q/8hA));
+                  unit2.d=score_2.q-(8hA*(score_2.q/8hA));
+                  
+                  disp.values = {score_1.q/10,unit1.q,score_2.q/10,unit2.q};
+                io_led[0][1]=1;
+                io_led[1][4:0]=int.q;
+                io_led[2]=random.q;
+                io_led[2][7:3]=score_1.q[4:0];
+                led_player_1[1]=1;
+                led_player_2[1]=1;
+                  case(inp_game_difficulty.q){
+                      b11:
+                          if(int.q>=TIMER_2){
+                              state.d = state.GAME_END;
+                              }
+                      default:
+                          if(int.q>=TIMER_1){
+                              state.d = state.GAME_END;
+                              } 
+                        }
+            
+                   case(inp_game_difficulty.q){
+                        b01:speed.d=slowClockEdge_1.out;
+                            sub.d=0;
+                        b10:speed.d=slowClockEdge_1.out;
+                            sub.d=1;
+                        b11:speed.d=slowClockEdge_2.out;
+                            sub.d=1;                          
+                        }
+            //score counting
+                if( buttondetector_1.out[1]==1){//increase score of 1
+                        score_1.d=score_1.q+1;            
+                        }
+                if( buttondetector_2.out[1]==1){//increase score of 2
+                        score_2.d=score_2.q+1;            
+                        }
+            //score reduction                    
+                   if((buttondetector_1.out[0]==1|buttondetector_1.out[2]==1|buttondetector_1.out[3]==1|buttondetector_1.out[4]==1) & sub.q==1 & (score_1.q!=5b0)){
+                              score_1.d=score_1.q-1;
+                          }
+                  if((buttondetector_2.out[0]==1|buttondetector_2.out[2]==1|buttondetector_2.out[3]==1|buttondetector_2.out[4]==1) & sub.q==1 & (score_2.q!=5b0)){
+                              score_2.d=score_2.q-1;
+                          }                          
+                 if (speed.q == b1){ //only trigger change when slowClockEdge gives a 1
+                      int.d=int.q+1;  
+                      random.d=rng.num[2:0];
+              
+                      case(random.q[2:0]){
+                          b000:state.d=state.STATE1;
+                          b001: state.d=state.STATE2;
+                          b010: state.d=state.STATE3;
+                          b011: state.d=state.STATE4;
+                          b100: state.d=state.STATE5;
+                          b110: state.d=state.STATE1;
+                          b111: state.d=state.STATE3;
+                          b101: state.d=state.STATE4;      
+                          default: state.d=state.STATE1;
+                           }
+                  }
+               
+            state.STATE3 :
+                  unit1.d=score_1.q-(8hA*(score_1.q/8hA));
+                  unit2.d=score_2.q-(8hA*(score_2.q/8hA));
+                  
+                  disp.values = {score_1.q/10,unit1.q,score_2.q/10,unit2.q};
+                  io_led[0][2]=1;
+                  io_led[1][4:0]=int.q;
+                  io_led[2]=random.q;
+                  io_led[2][7:3]=score_1.q[4:0];
+                  led_player_1[2]=1;
+                  led_player_2[2]=1;
+                  case(inp_game_difficulty.q){
+                      b11:
+                          if(int.q>=TIMER_2){
+                              state.d = state.GAME_END;
+                              }
+                      default:
+                          if(int.q>=TIMER_1){
+                              state.d = state.GAME_END;
+                              } 
+                      }
+
+                  case(inp_game_difficulty.q){
+                        b01:speed.d=slowClockEdge_1.out;
+                            sub.d=0;
+                        b10:speed.d=slowClockEdge_1.out;
+                            sub.d=1;
+                        b11:speed.d=slowClockEdge_2.out;
+                            sub.d=1;                          
+                        }
+            //score counting
+                  if(buttondetector_1.out[2]==1){//increase score of 1
+                        score_1.d=score_1.q+1;            
+                        } 
+                  if( buttondetector_2.out[2]==1){//increase score of 2
+                        score_2.d=score_2.q+1;            
+                        }
+            //score reduction                    
+                   if((buttondetector_1.out[0]==1|buttondetector_1.out[1]==1|buttondetector_1.out[3]==1|buttondetector_1.out[4]==1) & sub.q==1 & (score_1.q!=5b0)){
+                              score_1.d=score_1.q-1;
+                          }
+                  if((buttondetector_2.out[0]==1|buttondetector_2.out[1]==1|buttondetector_2.out[3]==1|buttondetector_2.out[4]==1) & sub.q==1 & (score_2.q!=5b0)){
+                              score_2.d=score_2.q-1;
+                          }                       
+                
+                  if (speed.q == b1){ //only trigger change when slowClockEdge gives a 1
+                      int.d=int.q+1;   
+                      random.d=rng.num[2:0];
+                      
+                      case(random.q[2:0]){
+                          b000:state.d=state.STATE1;
+                          b001: state.d=state.STATE2;
+                          b010: state.d=state.STATE3;
+                          b011: state.d=state.STATE4;
+                          b100: state.d=state.STATE5;
+                          b110: state.d=state.STATE5;
+                          b111: state.d=state.STATE2;
+                          b101: state.d=state.STATE1;      
+                          default: state.d=state.STATE4;
+                           }
+                                                       
+                    }
+            
+            state.STATE4 : 
+                  unit1.d=score_1.q-(8hA*(score_1.q/8hA));
+                  unit2.d=score_2.q-(8hA*(score_2.q/8hA));
+                  
+                  disp.values = {score_1.q/10,unit1.q,score_2.q/10,unit2.q};            
+                  io_led[0][3]=1;
+                  io_led[1][4:0]=int.q;
+                  io_led[2]=random.q;
+                  io_led[2][7:3]=score_1.q[4:0];
+                  led_player_1[3]=1;
+                  led_player_2[3]=1;
+                  case(inp_game_difficulty.q){
+                      b11:
+                          if(int.q>=TIMER_2){
+                              state.d = state.GAME_END;
+                              }
+                      default:
+                          if(int.q>=TIMER_1){
+                              state.d = state.GAME_END;
+                              } 
+                      }
+            
+                  case(inp_game_difficulty.q){
+                        b01:speed.d=slowClockEdge_1.out;
+                            sub.d=0;
+                        b10:speed.d=slowClockEdge_1.out;
+                            sub.d=1;
+                        b11:speed.d=slowClockEdge_2.out;
+                            sub.d=1;                          
+                        }
+            //score counting
+                  if(buttondetector_1.out[3]==1){//increase score of 1
+                        score_1.d=score_1.q+1;            
+                        } 
+                  if( buttondetector_2.out[3]==1){//increase score of 2
+                        score_2.d=score_2.q+1;            
+                        }
+            //score reduction                    
+                   if((buttondetector_1.out[0]==1|buttondetector_1.out[1]==1|buttondetector_1.out[2]==1|buttondetector_1.out[4]==1) & sub.q==1 & (score_1.q!=5b0)){
+                              score_1.d=score_1.q-1;
+                          }
+                  if((buttondetector_2.out[0]==1|buttondetector_2.out[1]==1|buttondetector_2.out[2]==1|buttondetector_2.out[4]==1) & sub.q==1 & (score_2.q!=5b0)){
+                              score_2.d=score_2.q-1;
+                          }                   
+                  if (speed.q == b1){ //only trigger change when slowClockEdge gives a 1
+                      int.d=int.q+1; 
+                      random.d=rng.num[2:0];
+      	              
+                      case(random.q[2:0]){
+                          b000:state.d=state.STATE1;
+                          b001: state.d=state.STATE2;
+                          b010: state.d=state.STATE3;
+                          b011: state.d=state.STATE4;
+                          b100: state.d=state.STATE5;
+                          b110: state.d=state.STATE3;
+                          b111: state.d=state.STATE4;
+                          b101: state.d=state.STATE5;      
+                          default: state.d=state.STATE2;
+                           }                 
+                    }
+            
+            state.STATE5 :
+                  unit1.d=score_1.q-(8hA*(score_1.q/8hA));
+                  unit2.d=score_2.q-(8hA*(score_2.q/8hA));
+                  
+                  disp.values = {score_1.q/10,unit1.q,score_2.q/10,unit2.q};            
+                led_player_1[4]=1;
+                led_player_2[4]=1;
+                io_led[0][4]=1; 
+                io_led[1][4:0]=int.q;
+                io_led[2]=random.q;
+                io_led[2][7:3]=score_1.q[4:0];
+                  case(inp_game_difficulty.q){
+                      b11:
+                          if(int.q>=TIMER_2){
+                              state.d = state.GAME_END;
+                              }
+                      default:
+                          if(int.q>=TIMER_1){
+                              state.d = state.GAME_END;
+                              } 
+                      }
+            
+                  case(inp_game_difficulty.q){
+                        b01:speed.d=slowClockEdge_1.out;
+                            sub.d=0;
+                        b10:speed.d=slowClockEdge_1.out;
+                            sub.d=1;
+                        b11:speed.d=slowClockEdge_2.out;
+                            sub.d=1;                          
+                        }
+            //score counting
+                  if(buttondetector_1.out[4]==1){//increase score of 1
+                        score_1.d=score_1.q+1;            
+                        } 
+                  if( buttondetector_2.out[4]==1){//increase score of 2
+                        score_2.d=score_2.q+1;            
+                        }
+            //score reduction                    
+                   if((buttondetector_1.out[0]==1|buttondetector_1.out[1]==1|buttondetector_1.out[3]==1|buttondetector_1.out[2]==1) & sub.q==1 & (score_1.q!=5b0)){
+                              score_1.d=score_1.q-1;
+                          }
+                  if((buttondetector_2.out[0]==1|buttondetector_2.out[1]==1|buttondetector_2.out[3]==1|buttondetector_2.out[2]==1) & sub.q==1 & (score_2.q!=5b0)){
+                              score_2.d=score_2.q-1;
+                          } 
+                if (speed.q== b1 ){ //only trigger change when slowClockEdge gives a 1
+                    int.d=int.q+1; 
+                    random.d=rng.num[2:0];
+                      case(random.q[2:0]){
+                          b000:state.d=state.STATE1;
+                          b001: state.d=state.STATE2;
+                          b010: state.d=state.STATE3;
+                          b011: state.d=state.STATE4;
+                          b100: state.d=state.STATE5;
+                          b110: state.d=state.STATE3;
+                          b111: state.d=state.STATE4;
+                          b101: state.d=state.STATE5;      
+                          default: state.d=state.STATE3;
+                           }               
+                    }
+                      
+            state.GAME_END:
+
+                unit1.d=score_1.q-(8hA*(score_1.q/8hA));
+                unit2.d=score_2.q-(8hA*(score_2.q/8hA));
+                  
+                disp.values = {8hC,8h12,8h13,8hA};
+                
+                io_led[2][6]=1;
+                io_led[1]=score_1.q;
+                alu.a=score_1.q;
+                alu.b=score_2.q;
+                if(slowClockEdge_1.out==1){
+                    checker.d=1;              
+              }
+                if( buttondetector_1.out[3]==1 & checker.q){                      
+                      state.d=state.START_GAME;
+                      }
+                if ( buttondetector_1.out[4]==1 & checker.q){
+                    //alu.alufn_signal=110011;//equal                    
+                    if(score_1.q[7:0]==score_2.q[7:0]){
+                        
+                        state.d=state.DRAW;
+                        }                    
+ //                   alu.alufn_signal=110101;
+                    else if(score_1.q<score_2.q){//less than a<b 
+                            
+                            state.d=state.PLAYER_2;
+                            }
+                    else{
+                            
+                            state.d=state.PLAYER_1;
+                            }
+                        }
+    
+                    
+            state.PLAYER_1:
+                io_led[0]=8hFF;
+                led_player_1=11111;
+                disp.values = {8h1,8h1,8h1,8h1};
+                if( buttondetector_1.out[4]==1){
+                      state.d=state.START_GAME;
+                      } 
+                     
+           state.PLAYER_2:
+                io_led[1]=8hFF;
+                led_player_2=11111;
+                disp.values = {8h2,8h2,8h2,8h2};
+                if( buttondetector_1.out[4]==1){
+                      state.d=state.START_GAME;
+                      }  
+           state.DRAW:
+                disp.values = {8h8,8h0,8hE,8h11};
+                io_led[2]=8hFF;
+                led_player_2[4:0]=11111;
+                led_player_1[4:0]=11111;
+                if( buttondetector_1.out[4]==1){
+                      state.d=state.START_GAME;
+                      }                               
+            }    
+        }   
+  

@@ -1,0 +1,18 @@
+module led_numbering (
+    input clk,  // clock
+    input rst,  // reset
+
+    input int_number[4],
+    output io_seg,
+    output io_sel
+  ) {
+  multi_seven_seg disp(.clk(clk), .rst(rst));
+  
+  always {
+    io_seg = disp.seg;      //initialising
+    io_sel = disp.sel;
+    disp.values = {8h0,8h0,8h0,8h0};
+    
+    
+  }
+}
